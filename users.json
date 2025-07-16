@@ -1,0 +1,9 @@
+{
+    "admin": {
+        "password_hash": "$2y$10$EjQOeCUBFmdZJI5r5WOS8OWId1pWAiZ93QvGmu.DWpEkSuScAf6PG",
+        "is_active": true,
+        "created_at": "2025-07-14 03:52:15",
+        "last_login": "2025-07-15 04:32:31",
+        "updated_at": "2025-07-14 04:00:00"
+    }
+}

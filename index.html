@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miguel's Wireguard Pi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: #e2e8f0;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        body.dark-mode .container {
+            background: rgba(45, 55, 72, 0.95);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(102, 126, 234, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: scale(1.1);
+        }
+
+        body.dark-mode .theme-toggle {
+            background: rgba(226, 232, 240, 0.2);
+        }
+
+        body.dark-mode .theme-toggle:hover {
+            background: rgba(226, 232, 240, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: color 0.3s ease;
+        }
+
+        body.dark-mode .header h1 {
+            color: #e2e8f0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+
+        body.dark-mode .header p {
+            color: #a0aec0;
+        }
+
+        /* Tunnel Animation Styles */
+        .tunnel-visualization {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 125px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .tunnel-visualization {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tunnel-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .device {
+            width: 80px;
+            height: 80px;
+            background: #4a5568;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        body.dark-mode .device {
+            background: #2d3748;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .device.client {
+            background: #667eea;
+        }
+
+        body.dark-mode .device.client {
+            background: #5a67d8;
+        }
+
+        .device.server {
+            background: #48bb78;
+        }
+
+        body.dark-mode .device.server {
+            background: #38a169;
+        }
+
+        .tunnel-line {
+            position: absolute;
+            left: 90px;
+            right: 90px;
+            height: 4px;
+            background: #e2e8f0;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .tunnel-line {
+            background: #4a5568;
+            opacity: 0.5;
+        }
+
+        .tunnel-particles {
+            position: absolute;
+            left: 90px;
+            right: 90px;
+            height: 4px;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 20px;
+            height: 4px;
+            background: #667eea;
+            border-radius: 2px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        body.dark-mode .particle {
+            background: #9f7aea;
+        }
+
+        .tunnel-active .particle {
+            animation: moveParticle 2s linear infinite;
+            opacity: 0.8;
+        }
+
+        @keyframes moveParticle {
+            0% {
+                left: -20px;
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                left: calc(100% + 20px);
+                opacity: 0;
+            }
+        }
+
+        .particle:nth-child(2) { animation-delay: 0.4s; }
+        .particle:nth-child(3) { animation-delay: 0.8s; }
+        .particle:nth-child(4) { animation-delay: 1.2s; }
+        .particle:nth-child(5) { animation-delay: 1.6s; }
+
+        .tunnel-active .tunnel-line {
+            background: #667eea;
+            opacity: 0.3;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+
+        body.dark-mode .tunnel-active .tunnel-line {
+            background: #9f7aea;
+raspi@raspi:/var/www/html/api$ 
+            opacity: 0.5;
+            box-shadow: 0 0 20px rgba(159, 122, 234, 0.5);
+        }
+
+        .tunnel-active .device {
+            animation: devicePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes devicePulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .connection-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #718096;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .connection-label {
+            color: #a0aec0;
+        }
+
+        .tunnel-active .connection-label {
+            color: #667eea;
+        }
+
+        body.dark-mode .tunnel-active .connection-label {
+            color: #9f7aea;
+        }
+
+        .device-label {
+            position: absolute;
+            bottom: -20px;
+            font-size: 11px;
+            color: #718096;
+            white-space: nowrap;
+        }
+
+        body.dark-mode .device-label {
+            color: #a0aec0;
+        }
+
+        /* Rest of your existing styles remain the same */
+        .auth-form {
+            display: block;
+        }
+
+        .main-interface {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+            transition: color 0.3s ease;
+        }
+
+        body.dark-mode .form-group label {
+            color: #e2e8f0;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+            color: #333;
+        }
+
+        body.dark-mode .form-group input, 
+        body.dark-mode .form-group textarea, 
+        body.dark-mode .form-group select {
+            background: #2d3748;
+            border-color: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        body.dark-mode .form-group input:focus, 
+        body.dark-mode .form-group textarea:focus, 
+        body.dark-mode .form-group select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+            margin-left: 10px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .config-section {
+            background: #f7fafc;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .config-section {
+            background: #1a202c;
+            border-left-color: #667eea;
+        }
+
+        .config-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            transition: color 0.3s ease;
+        }
+
+        body.dark-mode .config-section h3 {
+            color: #e2e8f0;
+        }
+
+        .config-display {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .config-display {
+            background: #171923;
+            color: #cbd5e0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #48bb78;
+            box-shadow: 0 0 10px rgba(72, 187, 120, 0.5);
+        }
+
+        .status-inactive {
+            background: #f56565;
+            box-shadow: 0 0 10px rgba(245, 101, 101, 0.5);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        body.dark-mode .alert-success {
+            background: #22543d;
+            color: #c6f6d5;
+            border-color: #38a169;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        body.dark-mode .alert-error {
+            background: #742a2a;
+            color: #fed7d7;
+            border-color: #f56565;
+        }
+
+        .file-upload {
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        body.dark-mode .file-upload {
+            border-color: #4a5568;
+            background: rgba(45, 55, 72, 0.5);
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        body.dark-mode .file-upload:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+
+        body.dark-mode .tabs {
+            border-bottom-color: #4a5568;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        body.dark-mode .tab {
+            color: #a0aec0;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .rate-limit-warning {
+            background: #fef5e7;
+            color: #744210;
+            border: 1px solid #f6e05e;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        body.dark-mode .rate-limit-warning {
+            background: #744210;
+            color: #fef5e7;
+            border-color: #d69e2e;
+        }
+
+        .status-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            transition: color 0.3s ease;
+        }
+
+        body.dark-mode .status-section h3 {
+            color: #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 20px;
+            }
+
+            .theme-toggle {
+                top: 15px;
+                right: 15px;
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .btn {
+                width: 100%;
+                margin: 5px 0;
+            }
+
+            .btn-secondary {
+                margin-left: 0;
+            }
+
+            .tunnel-container {
+                max-width: 300px;
+            }
+
+            .device {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+
+            .tunnel-line {
+                left: 70px;
+                right: 70px;
+            }
+
+            .tunnel-particles {
+                left: 70px;
+                right: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">🌙</button>
+        
+        <div class="header">
+            <h1>🔐 Miguel's Wireguard Pi</h1>
+            <p>Secure WireGuard Configuration Manager</p>
+        </div>
+
+        <!-- Authentication Form -->
+        <div id="authForm" class="auth-form">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button class="btn" onclick="authenticate()" id="loginBtn">
+                <span id="loginText">Login</span>
+            </button>
+            <div id="authError" class="alert alert-error" style="display: none;"></div>
+        </div>
+
+        <!-- Main Interface -->
+        <div id="mainInterface" class="main-interface">
+            <!-- Tunnel Visualization -->
+            <div id="tunnelVisualization" class="tunnel-visualization">
+                <div class="tunnel-container">
+                    <span class="connection-label" id="connectionLabel">DISCONNECTED</span>
+                    <div class="device client">
+                        💻
+                        <span class="device-label">Your Device</span>
+                    </div>
+                    <div class="tunnel-line"></div>
+                    <div class="tunnel-particles">
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                        <div class="particle"></div>
+                    </div>
+                    <div class="device server">
+                        🌐
+                        <span class="device-label">VPN Server</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-section">
+                <h3>
+                    <span id="statusIndicator" class="status-indicator status-inactive"></span>
+                    WireGuard Status: <span id="statusText">Checking...</span>
+                </h3>
+                <button class="btn" onclick="toggleWireGuard()" id="toggleBtn">Start WireGuard</button>
+                <button class="btn btn-secondary" onclick="checkWiFiStatus()" id="wifiStatusBtn">Check WiFi Status</button>
+                <button class="btn btn-secondary" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- WiFi Status Section -->
+            <div id="wifiSection" class="config-section" style="display: none;">
+                <h3>
+                    <span id="wifiStatusIndicator" class="status-indicator status-inactive"></span>
+                    WiFi Status: <span id="wifiStatusText">Unknown</span>
+                </h3>
+                <div id="wifiDetails" class="config-display" style="display: none;"></div>
+                <button class="btn" onclick="showWiFiConfig()" id="configWiFiBtn">Configure WiFi</button>
+                <button class="btn btn-secondary" onclick="restartWiFi()" id="restartWiFiBtn">Restart WiFi</button>
+            </div>
+
+            <!-- WiFi Configuration Modal -->
+            <div id="wifiConfigModal" class="config-section" style="display: none;">
+                <h3>Configure WiFi Hotspot</h3>
+                <div class="form-group">
+                    <label for="wifiSSID">Network Name (SSID):</label>
+                    <input type="text" id="wifiSSID" placeholder="Enter network name (1-32 characters)" maxlength="32">
+                </div>
+                <div class="form-group">
+                    <label for="wifiPassword">Password:</label>
+                    <input type="password" id="wifiPassword" placeholder="Enter password (8-63 characters)" maxlength="63">
+                </div>
+                <button class="btn" onclick="saveWiFiConfig()">Save WiFi Configuration</button>
+                <button class="btn btn-secondary" onclick="hideWiFiConfig()">Cancel</button>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('current')">Current Config</div>
+                <div class="tab" onclick="showTab('upload')">Upload Config</div>
+                <div class="tab" onclick="showTab('manual')">Manual Config</div>
+            </div>
+
+            <!-- Current Configuration Tab -->
+            <div id="currentTab" class="tab-content active">
+                <div class="config-section">
+                    <h3>Current WireGuard Configuration</h3>
+                    <div id="currentConfig" class="config-display">No configuration file found</div>
+                    <button class="btn btn-danger" onclick="deleteConfig()">Delete Configuration</button>
+                </div>
+            </div>
+
+            <!-- Upload Configuration Tab -->
+            <div id="uploadTab" class="tab-content">
+                <div class="config-section">
+                    <h3>Upload WireGuard Configuration</h3>
+                    <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" style="display: none;" accept=".conf" onchange="handleFileUpload(event)">
+                        <p>📁 Click to select a .conf file or drag and drop here</p>
+                    </div>
+                    <div id="uploadPreview" class="config-display" style="display: none;"></div>
+                    <button class="btn" onclick="saveUploadedConfig()" id="saveUploadBtn" style="display: none;">Save Configuration</button>
+                </div>
+            </div>
+
+            <!-- Manual Configuration Tab -->
+            <div id="manualTab" class="tab-content">
+                <div class="config-section">
+                    <h3>Manual Configuration</h3>
+                    <div class="form-group">
+                        <label for="interfaceName">Interface Name:</label>
+                        <input type="text" id="interfaceName" value="wg0" placeholder="wg0">
+                    </div>
+                    <div class="form-group">
+                        <label for="privateKey">Private Key:</label>
+                        <input type="text" id="privateKey" placeholder="Generated automatically or paste existing">
+                        <button class="btn btn-secondary" onclick="generateKeyPair()" style="margin-top: 10px;">Generate New Key Pair</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="publicKey">Public Key (Read-only):</label>
+                        <input type="text" id="publicKey" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Address:</label>
+                        <input type="text" id="address" placeholder="10.0.0.2/24">
+                    </div>
+                    <div class="form-group">
+                        <label for="dns">DNS:</label>
+                        <input type="text" id="dns" placeholder="8.8.8.8, 8.8.4.4">
+                    </div>
+                    <div class="form-group">
+                        <label for="peerPublicKey">Peer Public Key:</label>
+                        <input type="text" id="peerPublicKey" placeholder="Server's public key">
+                    </div>
+                    <div class="form-group">
+                        <label for="allowedIPs">Allowed IPs:</label>
+                        <input type="text" id="allowedIPs" placeholder="0.0.0.0/0">
+                    </div>
+                    <div class="form-group">
+                        <label for="endpoint">Endpoint:</label>
+                        <input type="text" id="endpoint" placeholder="vpn.example.com:51820">
+                    </div>
+                    <div class="form-group">
+                        <label for="persistentKeepalive">Persistent Keepalive:</label>
+                        <input type="number" id="persistentKeepalive" placeholder="25">
+                    </div>
+                    <button class="btn" onclick="saveManualConfig()">Save Configuration</button>
+                </div>
+            </div>
+
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentConfig = null;
+        let isAuthenticated = false;
+        let uploadedConfigContent = null;
+        let sessionTimeout = null;
+
+        // Theme Management
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            body.classList.toggle('dark-mode');
+            
+            if (body.classList.contains('dark-mode')) {
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Initialize theme on page load
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Authentication
+        async function authenticate() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loginText = document.getElementById('loginText');
+            
+            if (!username || !password) {
+                showAuthError('Please enter both username and password');
+                return;
+            }
+
+            // Show loading state
+            loginBtn.disabled = true;
+            loginText.innerHTML = '<span class="loading"></span>Logging in...';
+            
+            try {
+                const response = await fetch('login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    isAuthenticated = true;
+                    document.getElementById('authForm').style.display = 'none';
+                    document.getElementById('mainInterface').style.display = 'block';
+                    hideAuthError();
+                    loadCurrentConfig();
+                    checkWireGuardStatus();
+                    
+                    // Set session timeout (30 minutes)
+                    setSessionTimeout();
+                } else {
+                    showAuthError(data.message || 'Login failed');
+                    
+                    // Check if it's a rate limit message
+                    if (data.message && data.message.includes('Too many')) {
+                        showRateLimitWarning();
+                    }
+                }
+            } catch (error) {
+                console.error('Authentication error:', error);
+                showAuthError('Login failed. Please try again.');
+            } finally {
+                // Reset button state
+                loginBtn.disabled = false;
+                loginText.textContent = 'Login';
+            }
+        }
+
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideAuthError() {
+            const errorDiv = document.getElementById('authError');
+            errorDiv.style.display = 'none';
+        }
+
+        function showRateLimitWarning() {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'rate-limit-warning';
+            warningDiv.textContent = 'Too many failed login attempts. Please wait 15 minutes before trying again.';
+            
+            const authForm = document.getElementById('authForm');
+            authForm.appendChild(warningDiv);
+            
+            // Remove warning after 10 seconds
+            setTimeout(() => {
+                if (authForm.contains(warningDiv)) {
+                    authForm.removeChild(warningDiv);
+                }
+            }, 10000);
+        }
+
+        function setSessionTimeout() {
+            // Clear existing timeout
+            if (sessionTimeout) {
+                clearTimeout(sessionTimeout);
+            }
+            
+            // Set 30 minute timeout
+            sessionTimeout = setTimeout(() => {
+                showMessage('Session expired. Please login again.', 'error');
+                logout();
+            }, 30 * 60 * 1000); // 30 minutes
+        }
+
+        function logout() {
+            isAuthenticated = false;
+            
+            // Clear session timeout
+            if (sessionTimeout) {
+                clearTimeout(sessionTimeout);
+                sessionTimeout = null;
+            }
+            
+            // Reset UI
+            document.getElementById('authForm').style.display = 'block';
+            document.getElementById('mainInterface').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            hideAuthError();
+            
+            // Clear any existing messages
+            document.getElementById('messages').innerHTML = '';
+            
+            // Make logout request to server
+            fetch('logout.php', {
+                method: 'POST'
+            }).catch(error => {
+                console.error('Logout error:', error);
+            });
+        }
+
+        // Session check function
+        async function checkSession() {
+            try {
+                const response = await fetch('check_session.php');
+                const data = await response.json();
+                
+                if (!data.authenticated && isAuthenticated) {
+                    showMessage('Session expired. Please login again.', 'error');
+                    logout();
+                }
+            } catch (error) {
+                console.error('Session check error:', error);
+            }
+        }
+
+            // Check session every 5 minutes and status every 30 seconds
+            setInterval(checkSession, 5 * 60 * 1000);
+            setInterval(() => {
+                if (isAuthenticated) {
+                    checkWireGuardStatus();
+                }
+            }, 30 * 1000);
+
+        // Tab Management
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Configuration Management
+        async function loadCurrentConfig() {
+            try {
+                const response = await fetch('api/load_config.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConfig = data.config;
+                    document.getElementById('currentConfig').textContent = hideConfigKeys(currentConfig);
+                    showMessage(data.message, 'success');
+                } else {
+                    useMockConfig();
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                useMockConfig();
+                showMessage('Failed to load configuration from server', 'error');
+            }
+        }
+
+        function useMockConfig() {
+            const mockConfig = `[Interface]
+PrivateKey = [HIDDEN]
+Address = 10.0.0.2/24
+DNS = 8.8.8.8, 8.8.4.4
+
+[Peer]
+PublicKey = ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
+AllowedIPs = 0.0.0.0/0
+Endpoint = vpn.example.com:51820
+PersistentKeepalive = 25`;
+
+            currentConfig = mockConfig;
+            document.getElementById('currentConfig').textContent = currentConfig;
+            showMessage('Using mock configuration (server unavailable)', 'success');
+        }
+
+        function hideConfigKeys(configText) {
+            return configText
+                .replace(/PrivateKey\s*=\s*[^\n]+/gi, 'PrivateKey = [HIDDEN]')
+                .replace(/PreSharedKey\s*=\s*[^\n]+/gi, 'PreSharedKey = [HIDDEN]');
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.conf')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedConfigContent = e.target.result;
+                    document.getElementById('uploadPreview').textContent = hideConfigKeys(uploadedConfigContent);
+                    document.getElementById('uploadPreview').style.display = 'block';
+                    document.getElementById('saveUploadBtn').style.display = 'inline-block';
+                };
+                reader.readAsText(file);
+            } else {
+                showMessage('Please select a valid .conf file', 'error');
+            }
+        }
+
+        async function saveUploadedConfig() {
+            if (!uploadedConfigContent) return;
+
+            try {
+                const response = await fetch('api/save_config.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        config: uploadedConfigContent
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConfig = uploadedConfigContent;
+                    document.getElementById('currentConfig').textContent = hideConfigKeys(currentConfig);
+                    showMessage(data.message, 'success');
+                    showTab('current');
+                    
+                    // Clear upload form
+                    document.getElementById('uploadPreview').style.display = 'none';
+                    document.getElementById('saveUploadBtn').style.display = 'none';
+                    document.getElementById('fileInput').value = '';
+                    uploadedConfigContent = null;
+                } else {
+                    showMessage(data.message || 'Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                showMessage('Failed to save configuration to server', 'error');
+            }
+        }
+
+        function generateKeyPair() {
+            // Simulate key generation
+            const mockPrivateKey = 'cGFzc3dvcmQxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcA==';
+            const mockPublicKey = 'UHVibGljS2V5MTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3A=';
+            
+            document.getElementById('privateKey').value = mockPrivateKey;
+            document.getElementById('publicKey').value = mockPublicKey;
+            showMessage('New key pair generated!', 'success');
+        }
+
+        async function saveManualConfig() {
+            const interfaceName = document.getElementById('interfaceName').value;
+            const privateKey = document.getElementById('privateKey').value;
+            const address = document.getElementById('address').value;
+            const dns = document.getElementById('dns').value;
+            const peerPublicKey = document.getElementById('peerPublicKey').value;
+            const allowedIPs = document.getElementById('allowedIPs').value;
+            const endpoint = document.getElementById('endpoint').value;
+            const persistentKeepalive = document.getElementById('persistentKeepalive').value;
+
+            if (!privateKey || !address || !peerPublicKey || !endpoint) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+
+            const config = `[Interface]
+PrivateKey = ${privateKey}
+Address = ${address}
+${dns ? `DNS = ${dns}` : ''}
+
+[Peer]
+PublicKey = ${peerPublicKey}
+AllowedIPs = ${allowedIPs || '0.0.0.0/0'}
+Endpoint = ${endpoint}
+${persistentKeepalive ? `PersistentKeepalive = ${persistentKeepalive}` : ''}`;
+
+            try {
+                const response = await fetch('api/save_config.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        config: config
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConfig = config;
+                    document.getElementById('currentConfig').textContent = hideConfigKeys(config);
+                    showMessage(data.message, 'success');
+                    showTab('current');
+                } else {
+                    showMessage(data.message || 'Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                showMessage('Failed to save configuration to server', 'error');
+            }
+        }
+
+        function deleteConfig() {
+            if (confirm('Are you sure you want to delete the current configuration?')) {
+                currentConfig = null;
+                document.getElementById('currentConfig').textContent = 'No configuration file found';
+                showMessage('Configuration deleted', 'success');
+            }
+        }
+
+        // WireGuard Status Management
+        async function checkWireGuardStatus() {
+            try {
+                const response = await fetch('api/status.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatusDisplay(data.isActive, data);
+                    updateTunnelVisualization(data.isActive);
+                    if (data.details) {
+                        showStatusDetails(data.details);
+                    }
+                } else {
+                    updateStatusDisplay(false, { error: data.message });
+                    updateTunnelVisualization(false);
+                    console.error('Status check failed:', data.message);
+                }
+            } catch (error) {
+                console.error('Error checking WireGuard status:', error);
+                updateStatusDisplay(false, { error: 'Failed to connect to server' });
+                updateTunnelVisualization(false);
+            }
+        }
+
+        function updateStatusDisplay(isActive, data) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const toggleBtn = document.getElementById('toggleBtn');
+
+            if (isActive) {
+                statusIndicator.className = 'status-indicator status-active';
+                statusText.textContent = 'Active';
+                toggleBtn.textContent = 'Stop WireGuard';
+                toggleBtn.disabled = false;
+            } else {
+                statusIndicator.className = 'status-indicator status-inactive';
+                statusText.textContent = 'Inactive';
+                toggleBtn.textContent = 'Start WireGuard';
+                toggleBtn.disabled = false;
+            }
+
+            // Show error details if present
+            if (data && data.error) {
+                statusText.textContent += ` (${data.error})`;
+                toggleBtn.disabled = true;
+            }
+        }
+
+        function updateTunnelVisualization(isActive) {
+            const tunnelViz = document.getElementById('tunnelVisualization');
+            const connectionLabel = document.getElementById('connectionLabel');
+            
+            if (isActive) {
+                tunnelViz.classList.add('tunnel-active');
+                connectionLabel.textContent = 'CONNECTED';
+                connectionLabel.style.color = '#48bb78';
+                
+                // Add server glow effect
+                const serverDevice = document.querySelector('.device.server');
+                serverDevice.style.boxShadow = '0 0 20px rgba(72, 187, 120, 0.6)';
+            } else {
+                tunnelViz.classList.remove('tunnel-active');
+                connectionLabel.textContent = 'DISCONNECTED';
+                connectionLabel.style.color = '#f56565';
+                
+                // Remove server glow effect
+                const serverDevice = document.querySelector('.device.server');
+                serverDevice.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+            }
+        }
+
+        function showStatusDetails(details) {
+            // Create or update status details section
+            let detailsSection = document.getElementById('statusDetails');
+            if (!detailsSection) {
+                detailsSection = document.createElement('div');
+                detailsSection.id = 'statusDetails';
+                detailsSection.className = 'config-section';
+                detailsSection.innerHTML = '<h3>Tunnel Status</h3><div id="statusDetailsContent" class="config-display"></div>';
+                
+                const statusSection = document.querySelector('.status-section');
+                statusSection.appendChild(detailsSection);
+            }
+
+            const detailsContent = document.getElementById('statusDetailsContent');
+            let detailsText = '';
+
+            if (details.interface_up !== undefined) {
+                detailsText += `Interface Status: ${details.interface_up ? 'UP' : 'DOWN'}\n`;
+            }
+            if (details.wg_running !== undefined) {
+                detailsText += `WireGuard Running: ${details.wg_running ? 'YES' : 'NO'}\n`;
+            }
+            if (details.recent_handshake !== undefined) {
+                detailsText += `Recent Handshake: ${details.recent_handshake ? 'YES' : 'NO'}\n`;
+            }
+            if (details.last_handshake) {
+                detailsText += `Last Handshake: ${details.last_handshake}\n`;
+            }
+
+            detailsContent.textContent = detailsText || 'No additional details available';
+        }
+    
+        async function toggleWireGuard() {
+            const currentStatus = document.getElementById('statusText').textContent;
+            const isCurrentlyActive = currentStatus.includes('Active');
+            const action = isCurrentlyActive ? 'stop' : 'start';
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            // Disable button and show loading
+            toggleBtn.disabled = true;
+            toggleBtn.innerHTML = `<span class="loading"></span>${isCurrentlyActive ? 'Stopping' : 'Starting'}...`;
+            
+            try {
+                const response = await fetch('api/toggle.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: action })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // Refresh status after a short delay
+                    setTimeout(() => {
+                        checkWireGuardStatus();
+                    }, 1000);
+                } else {
+                    showMessage(data.message || `Failed to ${action} WireGuard`, 'error');
+                    // Re-enable button
+                    toggleBtn.disabled = false;
+                    toggleBtn.textContent = isCurrentlyActive ? 'Stop WireGuard' : 'Start WireGuard';
+                }
+            } catch (error) {
+                console.error(`Error ${action}ing WireGuard:`, error);
+                showMessage(`Failed to ${action} WireGuard`, 'error');
+                
+                // Re-enable button
+                toggleBtn.disabled = false;
+                toggleBtn.textContent = isCurrentlyActive ? 'Stop WireGuard' : 'Start WireGuard';
+            }
+        }
+
+        // WiFi Management Functions
+        async function checkWiFiStatus() {
+            const wifiStatusBtn = document.getElementById('wifiStatusBtn');
+            const originalText = wifiStatusBtn.textContent;
+            
+            wifiStatusBtn.disabled = true;
+            wifiStatusBtn.innerHTML = '<span class="loading"></span>Checking...';
+            
+            try {
+                const response = await fetch('api/wifi_status.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateWiFiDisplay(data.wifi_status);
+                    document.getElementById('wifiSection').style.display = 'block';
+                    showMessage('WiFi status updated', 'success');
+                } else {
+                    showMessage(data.message || 'Failed to check WiFi status', 'error');
+                }
+            } catch (error) {
+                console.error('Error checking WiFi status:', error);
+                showMessage('Failed to check WiFi status', 'error');
+            } finally {
+                wifiStatusBtn.disabled = false;
+                wifiStatusBtn.textContent = originalText;
+            }
+        }
+
+        function updateWiFiDisplay(wifiStatus) {
+            const statusIndicator = document.getElementById('wifiStatusIndicator');
+            const statusText = document.getElementById('wifiStatusText');
+            const wifiDetails = document.getElementById('wifiDetails');
+            
+            if (wifiStatus.is_connected) {
+                statusIndicator.className = 'status-indicator status-active';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIndicator.className = 'status-indicator status-inactive';
+                statusText.textContent = 'Disconnected';
+            }
+            
+            let detailsText = `Device Status: ${wifiStatus.device_status}\n`;
+            if (wifiStatus.connection_name) {
+                detailsText += `Connection: ${wifiStatus.connection_name}\n`;
+            }
+            if (wifiStatus.ssid) {
+                detailsText += `SSID: ${wifiStatus.ssid}\n`;
+            }
+            detailsText += `Mode: ${wifiStatus.mode}\n`;
+            if (wifiStatus.ip_address) {
+                detailsText += `IP Address: ${wifiStatus.ip_address}\n`;
+            }
+            if (wifiStatus.channel) {
+                detailsText += `Channel: ${wifiStatus.channel}\n`;
+            }
+            detailsText += `Hotspot Mode: ${wifiStatus.is_hotspot ? 'Yes' : 'No'}`;
+            
+            wifiDetails.textContent = detailsText;
+            wifiDetails.style.display = 'block';
+        }
+
+        function showWiFiConfig() {
+            document.getElementById('wifiConfigModal').style.display = 'block';
+            
+            // Pre-fill current SSID if available
+            const currentSSID = document.getElementById('wifiDetails').textContent.match(/SSID: (.+)/);
+            if (currentSSID) {
+                document.getElementById('wifiSSID').value = currentSSID[1];
+            }
+        }
+
+        function hideWiFiConfig() {
+            document.getElementById('wifiConfigModal').style.display = 'none';
+            document.getElementById('wifiSSID').value = '';
+            document.getElementById('wifiPassword').value = '';
+        }
+
+        async function saveWiFiConfig() {
+            const ssid = document.getElementById('wifiSSID').value.trim();
+            const password = document.getElementById('wifiPassword').value;
+            
+            if (!ssid || !password) {
+                showMessage('Please enter both SSID and password', 'error');
+                return;
+            }
+            
+            if (ssid.length < 1 || ssid.length > 32) {
+                showMessage('SSID must be 1-32 characters', 'error');
+                return;
+            }
+            
+            if (password.length < 8 || password.length > 63) {
+                showMessage('Password must be 8-63 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('api/wifi_config.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'configure_hotspot',
+                        ssid: ssid,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    hideWiFiConfig();
+                    // Refresh WiFi status after a short delay
+                    setTimeout(() => {
+                        checkWiFiStatus();
+                    }, 2000);
+                } else {
+                    showMessage(data.message || 'Failed to configure WiFi', 'error');
+                }
+            } catch (error) {
+                console.error('Error configuring WiFi:', error);
+                showMessage('Failed to configure WiFi', 'error');
+            }
+        }
+
+        async function restartWiFi() {
+            const restartBtn = document.getElementById('restartWiFiBtn');
+            const originalText = restartBtn.textContent;
+            
+            restartBtn.disabled = true;
+            restartBtn.innerHTML = '<span class="loading"></span>Restarting...';
+            
+            try {
+                const response = await fetch('api/wifi_config.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'restart'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    // Refresh WiFi status after a short delay
+                    setTimeout(() => {
+                        checkWiFiStatus();
+                    }, 3000);
+                } else {
+                    showMessage(data.message || 'Failed to restart WiFi', 'error');
+                }
+            } catch (error) {
+                console.error('Error restarting WiFi:', error);
+                showMessage('Failed to restart WiFi', 'error');
+            } finally {
+                restartBtn.disabled = false;
+                restartBtn.textContent = originalText;
+            }
+        }
+
+        // Utility Functions
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            messagesDiv.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (messagesDiv.contains(alertDiv)) {
+                    messagesDiv.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme
+            initializeTheme();
+            
+            // Enter key login
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    authenticate();
+                }
+            });
+
+            // Check if already authenticated
+            checkSession();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<?php
+session_start();
+header('Content-Type: application/json');
+
+if ($_POST['username'] === 'admin' && $_POST['password'] === 'wireguard123') {
+    $_SESSION['authenticated'] = true;
+    echo json_encode(['success' => true]);
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
+}
+?>
+
