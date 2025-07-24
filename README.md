@@ -21,6 +21,14 @@ This is a comprehensive network management web application written in PHP with a
 - Check WireGuard status: `sudo wg show wg0`
 - Check interface status: `ip link show wg0`
 
+#### WireGuard Monitoring Service
+- Install monitoring service: `sudo ./install_wg_monitor.sh`
+- Start monitoring service: `sudo systemctl start wg0-monitor`
+- Stop monitoring service: `sudo systemctl stop wg0-monitor`
+- Check monitoring status: `sudo systemctl status wg0-monitor`
+- View monitoring logs: `sudo journalctl -u wg0-monitor -f`
+- View log file: `sudo tail -f /var/log/wg0_monitor.log`
+
 #### WiFi Hotspot Management
 - Check WiFi device status: `sudo nmcli device status | grep wlan0`
 - Show current connections: `sudo nmcli connection show`
@@ -47,6 +55,7 @@ This application runs on a standard PHP web server. The working directory `/var/
 - `check_session.php` - Session validation endpoint
 - `manage_users.php` - CLI user management script
 - `users.json` - User database (JSON format)
+- `install_wg_monitor.sh` - WireGuard monitoring service installation script
 - `api/` - REST API endpoints:
   - `status.php` - WireGuard status checking
   - `toggle.php` - Start/stop WireGuard service
@@ -72,6 +81,12 @@ This application runs on a standard PHP web server. The working directory `/var/
 - Real-time status monitoring including interface state and handshake status
 - Support for configuration upload, manual entry, and file-based management
 - Configuration validation prevents malformed configs
+- Automated monitoring service that:
+  - Continuously monitors wg0 interface status (every 2 minutes)
+  - Automatically restarts WireGuard if the interface goes down
+  - Reboots the system after 10 consecutive failed restart attempts
+  - Logs all monitoring activities to `/var/log/wg0_monitor.log`
+  - Runs as a systemd service with automatic startup on boot
 
 #### WiFi Hotspot Management
 - Uses NetworkManager (`nmcli`) for WiFi control (no hostapd dependency)
