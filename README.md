@@ -4,6 +4,30 @@
 
 This is a comprehensive network management web application written in PHP with a client-side JavaScript interface. The application provides a secure web-based interface for managing both WireGuard VPN configurations and WiFi hotspot settings on a Raspberry Pi. It combines VPN service control with WiFi access point management in a unified interface.
 
+## Screenshots
+
+### Login Screen
+![Login Screen](RES/mnv_wg_login.png)
+
+### Main Menu
+![Main Menu](RES/mnv_wg_main_menu.png)
+
+### WiFi Management
+![WiFi Menu](RES/mnv_wg_wifi_menu.png)
+
+## Monitoring Integration
+
+The application includes comprehensive monitoring capabilities for network services:
+
+### Zabbix & Grafana Monitoring
+![Zabbix WireGuard Monitoring](RES/zabbix-wireguard.png)
+
+The system integrates with Zabbix for monitoring WireGuard VPN status and performance metrics, with Grafana dashboards providing visual monitoring of:
+- VPN connection status and handshake monitoring
+- Network throughput and latency metrics
+- System health and connectivity statistics
+- Real-time alerting for service interruptions
+
 ## Common Development Commands
 
 ### User Management
